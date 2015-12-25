@@ -12,17 +12,26 @@
 	else if (typeof window !== 'undefined' && window.document) local = window;
 	else local = self;
 
+	function isPromiseLike(obj) {
+		return obj !== undefined && obj !== null && typeof obj.then === 'function';
+	}
+
 	// It's replaced unconditionally to preserve the expected behavior
 	// in programs even if there's ever a native finally.
 	local.Promise.prototype['finally'] = function finallyPolyfill(callback) {
 		var constructor = this.constructor;
 
+		var getPromise = function() {
+			var result = callback();
+			return isPromiseLike(result) ? result : constructor.resolve(result);
+		};
+
 		return this.then(function(value) {
-				return constructor.resolve(callback()).then(function() {
+				return getPromise().then(function() {
 					return value;
 				});
 			}, function(reason) {
-				return constructor.resolve(callback()).then(function() {
+				return getPromise().then(function() {
 					throw reason;
 				});
 			});
